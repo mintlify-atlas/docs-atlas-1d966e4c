@@ -1,0 +1,43 @@
+---
+title: "Introduction"
+description: "What Recetas Deliciosas Como Servicio is and why it exists"
+---
+
+**Recetas Deliciosas Como Servicio (RDCS)** is a secure culinary subscription platform where chefs publish exclusive recipes and subscribers pay for time-limited access. Every recipe is encrypted with AES-128-GCM before it leaves the chef's browser, and only subscribers with a valid, unexpired contract can decrypt and read the content.
+
+## The problem
+
+A chef wants to monetize exclusive recipes online — but trusting a third-party server with plaintext content is unacceptable. Any server compromise, rogue administrator, or network eavesdropper would expose the recipes immediately.
+
+RDCS solves this by never storing plaintext. The server holds only ciphertexts, encrypted private keys, and contract metadata. Neither the server operator nor a network observer can reconstruct a recipe without both the subscriber's password and an active contract.
+
+## The two roles
+
+**Chef** — The recipe author. After registering, you receive an ECDSA P-256 key pair. Your private key is encrypted with your password using PBKDF2 + AES-128-GCM and stored in the database. You upload recipe content, which the platform encrypts with a unique AES-128-GCM key before writing it to the external vault. Only your subscribers — and you — can read the plaintext.
+
+**Subscriber** — The paying reader. You create an account, receive your own ECDSA key pair (also password-protected), and purchase a subscription contract with a chef for 3, 6, or 12 months. While your contract is active, the platform decrypts and delivers the recipe content on demand. When it expires, access is revoked automatically — no manual action required.
+
+<Note>
+Both chefs and subscribers go through the same cryptographic onboarding: ECDSA P-256 key generation, password-based private key encryption, and email confirmation via a 32-byte random token.
+</Note>
+
+## Academic context
+
+This project was developed as the final deliverable for the **Selected Topics of Cryptography** course (7CM1) at ESCOM-IPN, under the supervision of Professor Sandra Díaz Santiago. The goal was to build a real, working system that demonstrates hybrid cryptography, partial zero-knowledge design, and cryptographically enforced access control — not just a theoretical model.
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="System architecture" icon="sitemap" href="/architecture">
+    How the React frontend, Node.js backend, Python crypto engine, and SQLite database fit together
+  </Card>
+  <Card title="Prerequisites" icon="list-check" href="/getting-started/prerequisites">
+    Node.js, Python, and Mailtrap requirements before you install
+  </Card>
+  <Card title="Chef registration" icon="utensils" href="/chef/registration">
+    Create a chef account and receive your encrypted identity keys
+  </Card>
+  <Card title="Subscriber registration" icon="book-open" href="/subscriber/registration">
+    Create a subscriber account and start browsing the recipe vault
+  </Card>
+</CardGroup>

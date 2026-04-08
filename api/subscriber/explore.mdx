@@ -1,0 +1,149 @@
+---
+title: "Explore Recipes"
+description: "Search and filter the recipe catalog"
+---
+
+`GET /api/subscriber/explore`
+
+Returns a list of recipes from the vault. All query parameters are optional — omitting them returns all recipes ordered by newest first.
+
+<Tip>
+  Use `GET /api/chef/categorias` to retrieve valid category IDs before filtering by `categoria`.
+</Tip>
+
+## Query parameters
+
+<ParamField query="search" type="string">
+  Full-text search term. Matches against the recipe title, chef name, and description.
+</ParamField>
+
+<ParamField query="categoria" type="integer">
+  Filter results to a single category by its ID. Use `GET /api/chef/categorias` to get the list of available IDs and their names.
+</ParamField>
+
+<ParamField query="dificultad" type="string">
+  Filter by difficulty level. Must be one of: `"Fácil"`, `"Media"`, or `"Difícil"`.
+</ParamField>
+
+<ParamField query="tiempo" type="integer">
+  Maximum preparation time in minutes. Recipes that take longer are excluded.
+</ParamField>
+
+<ParamField query="orden" type="string">
+  Sort order for results. Pass `"valoracion"` to sort by popularity (most favorited first). Omit this parameter to sort by newest first.
+</ParamField>
+
+## Response
+
+<ResponseField name="status" type="string">
+  `'ok'` on success.
+</ResponseField>
+
+<ResponseField name="data" type="object[]">
+  Array of recipe objects matching the filters.
+
+  <Expandable title="recipe object properties">
+    <ResponseField name="id_receta" type="integer">
+      Unique recipe identifier.
+    </ResponseField>
+    <ResponseField name="titulo" type="string">
+      Recipe title.
+    </ResponseField>
+    <ResponseField name="subtitulo" type="string">
+      Short subtitle or tagline for the recipe.
+    </ResponseField>
+    <ResponseField name="descripcion" type="string">
+      Full description of the recipe.
+    </ResponseField>
+    <ResponseField name="tiempo_preparacion" type="integer">
+      Preparation time in minutes.
+    </ResponseField>
+    <ResponseField name="dificultad" type="string">
+      Difficulty level: `"Fácil"`, `"Media"`, or `"Difícil"`.
+    </ResponseField>
+    <ResponseField name="porciones" type="integer">
+      Number of servings the recipe yields.
+    </ResponseField>
+    <ResponseField name="id_categoria" type="integer">
+      ID of the recipe's category.
+    </ResponseField>
+    <ResponseField name="url_archivo_cifrado" type="string">
+      Vault filename for the encrypted recipe file. This is an internal reference — it is not useful for client display.
+    </ResponseField>
+    <ResponseField name="hash_archivo" type="string">
+      Integrity hash of the encrypted file.
+    </ResponseField>
+    <ResponseField name="fecha_creacion" type="string">
+      ISO 8601 date when the recipe was created.
+    </ResponseField>
+    <ResponseField name="id_chef" type="integer">
+      ID of the chef who created the recipe.
+    </ResponseField>
+    <ResponseField name="nombre_chef" type="string">
+      Display name of the chef.
+    </ResponseField>
+    <ResponseField name="nombre_categoria" type="string">
+      Display name of the recipe's category.
+    </ResponseField>
+    <ResponseField name="valoracion" type="integer">
+      Number of subscribers who have favorited this recipe.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+<Tabs>
+  <Tab title="Search by keyword">
+    ```bash
+    curl "http://localhost:3000/api/subscriber/explore?search=pasta"
+    ```
+  </Tab>
+  <Tab title="Filter by category">
+    ```bash
+    curl "http://localhost:3000/api/subscriber/explore?categoria=3"
+    ```
+  </Tab>
+  <Tab title="Filter by difficulty">
+    ```bash
+    curl "http://localhost:3000/api/subscriber/explore?dificultad=F%C3%A1cil"
+    ```
+  </Tab>
+  <Tab title="Sort by popularity">
+    ```bash
+    curl "http://localhost:3000/api/subscriber/explore?orden=valoracion"
+    ```
+  </Tab>
+  <Tab title="Combined filters">
+    ```bash
+    curl "http://localhost:3000/api/subscriber/explore?search=pollo&dificultad=Media&tiempo=30&orden=valoracion"
+    ```
+  </Tab>
+</Tabs>
+
+### Success response
+
+```json
+{
+  "status": "ok",
+  "data": [
+    {
+      "id_receta": 7,
+      "titulo": "Pasta al Pesto",
+      "subtitulo": "Clásico italiano en 20 minutos",
+      "descripcion": "Una pasta fresca con salsa de albahaca y piñones.",
+      "tiempo_preparacion": 20,
+      "dificultad": "Fácil",
+      "porciones": 2,
+      "id_categoria": 3,
+      "url_archivo_cifrado": "vault_abc123.json",
+      "hash_archivo": "e3b0c44298fc1c149afb...",
+      "fecha_creacion": "2025-03-15",
+      "id_chef": 4,
+      "nombre_chef": "Chef Hernández",
+      "nombre_categoria": "Italiana",
+      "valoracion": 42
+    }
+  ]
+}
+```

@@ -1,0 +1,75 @@
+---
+title: "Chef Profile"
+description: "Update your public chef profile"
+---
+
+## PUT /api/chef/profile/:id_chef
+
+Updates the chef's public profile fields: bio, photo URL, and star rating.
+
+### Path parameters
+
+<ParamField path="id_chef" type="integer" required>
+  The unique identifier of the chef whose profile you want to update.
+</ParamField>
+
+### Request body
+
+<ParamField body="descripcion" type="string">
+  A short public bio displayed on your profile and recipe cards.
+</ParamField>
+
+<ParamField body="foto_url" type="string">
+  A publicly accessible URL pointing to your profile photo. The platform does not host images directly — you must provide a URL to an image hosted elsewhere.
+</ParamField>
+
+<ParamField body="estrellas" type="integer" default="5">
+  Your star rating, displayed to subscribers. Typically between 1 and 5.
+</ParamField>
+
+<Tip>
+  The `foto_url` should be a publicly accessible image URL (e.g., from a CDN or image hosting service). The platform does not host images directly, so links to private or authenticated storage will not render correctly for subscribers.
+</Tip>
+
+### Response
+
+<ResponseField name="status" type="string" required>
+  `"ok"` on success.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  `"Perfil actualizado"`
+</ResponseField>
+
+### Error responses
+
+| Status | Description |
+|--------|-------------|
+| `500` | Database update failed or internal server error. |
+
+### Example
+
+```bash cURL
+curl --request PUT \
+  --url https://api.example.com/api/chef/profile/1 \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "descripcion": "Chef especializada en cocina tradicional mexicana con más de 10 años de experiencia.",
+    "foto_url": "https://example.com/photos/maria-garcia.jpg",
+    "estrellas": 5
+  }'
+```
+
+```json 200
+{
+  "status": "ok",
+  "message": "Perfil actualizado"
+}
+```
+
+```json 500
+{
+  "status": "error",
+  "message": "Internal server error message"
+}
+```

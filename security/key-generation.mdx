@@ -1,0 +1,92 @@
+---
+title: "Key Generation"
+description: "How ECDSA P-256 identity keys are generated and protected with your password"
+---
+
+## Why key generation matters
+
+When you register on RDCS, the platform generates a unique cryptographic identity for you — not just an account. Every user receives an ECDSA P-256 key pair that only you can unlock. Your private key is never stored in plaintext anywhere in the system. The only thing that can recover it is your password.
+
+This means no one — not the platform, not the database administrator — can impersonate you or read your private key without knowing your password first.
+
+## ECDSA P-256 key pair generation
+
+On registration, the platform calls `crypto_vault/keys.py` to generate a fresh key pair using the P-256 elliptic curve (also known as `secp256r1`):
+
+```python
+# From crypto_vault/keys.py
+private_key = ec.generate_private_key(ec.SECP256R1())
+
+public_pem = private_key.public_key().public_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PublicFormat.SubjectPublicKeyInfo
+).decode('utf-8')
+
+private_pem = private_key.private_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PrivateFormat.TraditionalOpenSSL,
+    encryption_algorithm=serialization.NoEncryption()
+)
+```
+
+The public key is exported in SubjectPublicKeyInfo (SPKI) PEM format. The private key is exported in TraditionalOpenSSL PEM format without any built-in passphrase — because the platform handles its own encryption layer on top.
+
+## Key protection flow
+
+Your private key is immediately encrypted before it leaves the Python process. The platform derives an AES key from your password using PBKDF2, then encrypts the private key with AES-128-GCM:
+
+```python
+# From crypto_vault/keys.py
+salt = os.urandom(16)
+kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=16, salt=salt, iterations=100000)
+aes_key = kdf.derive(password_str.encode())
+
+aesgcm = AESGCM(aes_key)
+nonce = os.urandom(12)
+encrypted_private = aesgcm.encrypt(nonce, private_pem, None)
+```
+
+The `salt` and `nonce` are generated fresh for each user registration using `os.urandom`, so no two users share the same derivation parameters even if they choose the same password.
+
+<Note>
+PBKDF2 uses 100,000 iterations of SHA-256 with a 16-byte random salt. This makes brute-forcing your password computationally expensive — an attacker who obtains the database would need to run 100,000 SHA-256 hashes per password guess.
+</Note>
+
+## What gets stored in the database
+
+After key generation, the platform stores four values in the `usuarios` table:
+
+| Field | Value | Notes |
+|---|---|---|
+| `clave_publica` | Public key (PEM) | Stored in plaintext |
+| `clave_privada_cifrada` | Encrypted private key (hex) | Never decrypted server-side without your password |
+| `crypto_salt` | PBKDF2 salt (hex) | Required to re-derive the AES key at login |
+| `crypto_nonce` | AES-GCM nonce (hex) | Required to decrypt the private key at login |
+
+Your plaintext private key and your plaintext password are **never** stored.
+
+## Key decryption at login
+
+When you log in, the platform re-derives the same AES key using your password and the stored salt, then decrypts the private key:
+
+```python
+# From crypto_vault/keys.py
+def decrypt_private_key(password_str, encrypted_hex, salt_hex, nonce_hex):
+    salt = bytes.fromhex(salt_hex)
+    nonce = bytes.fromhex(nonce_hex)
+    encrypted_data = bytes.fromhex(encrypted_hex)
+
+    kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=16, salt=salt, iterations=100000)
+    aes_key = kdf.derive(password_str.encode())
+
+    aesgcm = AESGCM(aes_key)
+    decrypted_pem = aesgcm.decrypt(nonce, encrypted_data, None)
+
+    return {"status": "success", "private_key": decrypted_pem.decode('utf-8')}
+```
+
+If you enter the wrong password, `AESGCM.decrypt()` raises an authentication error because AES-GCM includes an integrity tag — the decryption fails rather than producing garbled output. The function catches this and returns `{ "status": "error" }` instead.
+
+<Warning>
+RDCS uses a partial zero-knowledge model. The server stores your encrypted private key. Your password is the only protection against someone who gains access to the database. Use a strong, unique password — if you lose it, your cryptographic identity cannot be recovered.
+</Warning>

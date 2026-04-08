@@ -1,0 +1,86 @@
+---
+title: "Security Model"
+description: "Trust assumptions, cryptographic guarantees, and the partial zero-knowledge design"
+---
+
+RDCS is built on a **partial zero-knowledge model**: the server stores only ciphertexts and password-protected key material. It cannot read recipe content or impersonate a user without knowing their password. However, because the server stores encrypted private keys, a server compromise combined with a weak user password could expose key material through offline brute-force attacks.
+
+## What the server knows and doesn't know
+
+The server stores the following in the database for every user and chef:
+
+- Public key (PEM) — public by design
+- Encrypted private key (AES-128-GCM ciphertext)
+- PBKDF2 salt (16 random bytes, hex-encoded)
+- AES-GCM nonce (12 random bytes, hex-encoded)
+- bcrypt password hash
+- Encrypted recipe files and their SHA-256 hashes
+- Per-recipe AES symmetric keys (stored as plaintext hex in `clave_receta`; access is gated by the contract check)
+- Subscription contract start and end dates
+
+The server **never** stores:
+
+- Plaintext private keys
+- Plaintext recipe content
+- User passwords in any recoverable form
+
+<Note>
+The zero-knowledge model applies primarily to user identity (private keys) — not to recipe content. Recipe AES keys are stored as plaintext in `clave_receta`, so a database-level attacker could decrypt recipes directly. The partial model protects user identities against offline attacks, while recipe access is enforced by server-side contract checks.
+</Note>
+
+## Trust boundary table
+
+| Principal | Can read recipe plaintext | Can read private keys | Can impersonate a user |
+|---|---|---|---|
+| **Server operator** | No — sees only ciphertexts in the vault | No — sees only encrypted key material | No — bcrypt prevents password recovery |
+| **Chef** | Yes — for their own recipes only, using their own key | Yes — their own private key, after providing the correct password | No |
+| **Subscriber (active contract)** | Yes — for recipes covered by a valid, unexpired contract | Yes — their own private key, after providing the correct password | No |
+| **Subscriber (expired contract)** | No — the server rejects the request before decryption | No | No |
+| **Network observer** | No — HTTPS in transit; ciphertexts at rest | No | No |
+
+## Security services
+
+The platform delivers five distinct security services, each backed by a specific cryptographic primitive:
+
+| Service | Algorithm | What it protects |
+|---|---|---|
+| **Identity** | ECDSA P-256 | Generates a verifiable key pair for each user and chef at registration. The private key proves identity; the public key is stored openly for verification and key exchange. |
+| **Key protection** | PBKDF2-SHA256 + AES-128-GCM | Derives a 128-bit AES key from the user's password (100,000 iterations, 16-byte random salt), then encrypts the private key PEM with AES-128-GCM (12-byte random nonce). Only the correct password can recover the private key. |
+| **Recipe encryption** | AES-128-GCM | Encrypts recipe content with a unique 128-bit key and 12-byte nonce per recipe. AES-GCM provides both confidentiality and authentication — a tampered ciphertext will fail decryption. |
+| **Integrity** | SHA-256 | A SHA-256 hash of each encrypted recipe file is stored in the database at upload time. Before decryption, the server recomputes the hash and rejects files that do not match. |
+| **Email validation** | 32-byte random token | A cryptographically random 64-character hex token is sent to the user's email at registration. The account is not activated until the link is clicked, ensuring the email address is reachable. |
+
+## When a subscription expires
+
+Access revocation is enforced at the server before any decryption takes place. When you request a recipe, the backend checks the `contrato` table for a row where:
+
+- `id_usuario` matches your session
+- `id_chef` matches the recipe's author
+- `estado = 'activo'`
+- `fecha_fin` is in the future
+
+If no such row exists, the server returns a 403 error immediately. The encrypted file is never read from the vault, and the symmetric key is never retrieved from `clave_receta`. Decryption does not occur.
+
+<Warning>
+Subscription expiry is enforced server-side by date comparison, not by re-encrypting the recipe with a new key. This means a subscriber who obtained the decrypted content during an active contract retains that copy. The platform prevents future server-mediated access — it cannot revoke previously delivered plaintext.
+</Warning>
+
+## The partial trust assumption
+
+Because the server stores your encrypted private key alongside the salt and nonce needed to attempt decryption, the security of your private key depends directly on the strength of your password.
+
+<AccordionGroup>
+  <Accordion title="What PBKDF2 buys you">
+    PBKDF2 with 100,000 SHA-256 iterations makes brute-force attacks expensive. A single password guess requires 100,000 hash operations. This significantly slows offline dictionary attacks against a compromised database, but does not eliminate the risk — a weak or common password remains vulnerable.
+  </Accordion>
+  <Accordion title="What AES-128-GCM buys you">
+    AES-GCM provides authenticated encryption. An attacker cannot modify the private key ciphertext without the modification being detected at decryption time. This prevents tampering with stored key material, even if the database is writable.
+  </Accordion>
+  <Accordion title="What the partial model does not cover">
+    The server holds all the data an attacker needs to attempt offline decryption of a private key: the encrypted private key, the salt, and the nonce. A compromised database combined with a weak user password can be attacked offline without time limits. The model is "partial" zero-knowledge precisely because the server is a necessary custodian of this material.
+  </Accordion>
+</AccordionGroup>
+
+<Tip>
+Use a strong, unique password when registering. Your private key's security is bounded by your password's resistance to offline dictionary attacks. The 100,000-iteration PBKDF2 derivation adds cost for an attacker but cannot compensate for a guessable password.
+</Tip>

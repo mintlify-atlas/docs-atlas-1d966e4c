@@ -1,0 +1,108 @@
+---
+title: "Login"
+description: "Authenticate and retrieve your user ID and role"
+---
+
+`POST /api/users/login`
+
+Authenticates a subscriber or chef by verifying their password and cryptographic key integrity. Returns the account ID, display name, and role on success.
+
+<Info>
+  This API does not use session tokens or JWTs. Store the `id` and `rol` values returned from this response in your application state — you will use them directly in all subsequent API calls.
+</Info>
+
+### Request body
+
+<ParamField body="correo" type="string" required>
+  The account's email address.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The account's password. The server verifies this against both the bcrypt hash and the encrypted ECDSA private key.
+</ParamField>
+
+### Response
+
+<ResponseField name="status" type="string">
+  `'ok'` on success.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  `'¡Bienvenido!'` for subscribers, `'¡Bienvenido Chef!'` for chefs.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties" defaultOpen={true}>
+    <ResponseField name="id" type="number">
+      The account's numeric ID (`id_usuario` for subscribers, `id_chef` for chefs). Use this value as the user or chef ID in all subsequent requests.
+    </ResponseField>
+
+    <ResponseField name="nombre" type="string">
+      The account's display name.
+    </ResponseField>
+
+    <ResponseField name="rol" type="string">
+      The account's role. Either `'usuario'` (subscriber) or `'chef'`.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/users/login \
+  -H "Content-Type: application/json" \
+  -d '{"correo": "maria@example.com", "password": "mySecurePass123"}'
+```
+
+```json
+{
+  "status": "ok",
+  "message": "¡Bienvenido!",
+  "data": {
+    "id": 4,
+    "nombre": "María García",
+    "rol": "usuario"
+  }
+}
+```
+
+### Error responses
+
+<AccordionGroup>
+  <Accordion title="401 — Invalid credentials">
+    No account was found with that email address, or the password does not match the stored bcrypt hash.
+
+    ```json
+    { "status": "error", "message": "Credenciales inválidas" }
+    ```
+  </Accordion>
+
+  <Accordion title="403 — Email not confirmed">
+    The account exists and the password is correct, but the confirmation link in the registration email has not been clicked yet.
+
+    ```json
+    { "status": "error", "message": "Por favor, confirma tu correo electrónico." }
+    ```
+  </Accordion>
+
+  <Accordion title="401 — Cryptographic integrity error">
+    The password passed bcrypt verification but could not decrypt the stored ECDSA private key. This indicates data corruption rather than a wrong password, and requires manual investigation.
+
+    ```json
+    { "status": "error", "message": "Error de integridad en las llaves de seguridad" }
+    ```
+  </Accordion>
+
+  <Accordion title="500 — Server error">
+    An unexpected server-side error occurred during authentication.
+
+    ```json
+    { "status": "error", "message": "<error details>" }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  If you receive `"Error de integridad en las llaves de seguridad"`, your password matched but the encrypted private key stored in the database could not be decrypted with it. This is a data integrity issue, not a simple wrong-password error. Contact your system administrator.
+</Warning>

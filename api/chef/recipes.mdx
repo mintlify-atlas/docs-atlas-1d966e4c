@@ -1,0 +1,370 @@
+---
+title: "Recipe Management"
+description: "Upload, retrieve, update, and delete encrypted recipes"
+---
+
+Recipe content — ingredients, preparation steps, and images — is encrypted with AES-128 before being written to the vault. The encrypted `.enc` file is stored externally; only metadata is kept in the database.
+
+---
+
+## POST /api/chef/upload
+
+Encrypts a new recipe and saves it to the vault.
+
+### Request body
+
+<ParamField body="id_chef" type="integer" required>
+  The ID of the chef uploading the recipe.
+</ParamField>
+
+<ParamField body="titulo" type="string" required>
+  The recipe's public title.
+</ParamField>
+
+<ParamField body="subtitulo" type="string" required>
+  A short tagline for the recipe.
+</ParamField>
+
+<ParamField body="descripcion" type="string" required>
+  A brief public description (stored in plaintext as metadata).
+</ParamField>
+
+<ParamField body="tiempo_preparacion" type="string" required>
+  Estimated preparation time (e.g., `"45"`).
+</ParamField>
+
+<ParamField body="dificultad" type="string" required>
+  Difficulty level. Accepted values: `"Fácil"`, `"Media"`, `"Difícil"`.
+</ParamField>
+
+<ParamField body="porciones" type="integer" required>
+  Number of servings.
+</ParamField>
+
+<ParamField body="id_categoria" type="integer" required>
+  Category ID from `GET /api/chef/categorias`.
+</ParamField>
+
+<ParamField body="contenido" type="object" required>
+  The recipe content to be encrypted and stored in the vault.
+  <Expandable title="properties">
+    <ParamField body="contenido.ingredientes" type="array" required>
+      List of ingredients. Must include at least one complete entry.
+      <Expandable title="properties">
+        <ParamField body="nombre" type="string" required>
+          Ingredient name (e.g., `"Tortillas"`).
+        </ParamField>
+        <ParamField body="cantidad" type="string" required>
+          Quantity and unit (e.g., `"12 pzas"`).
+        </ParamField>
+      </Expandable>
+    </ParamField>
+    <ParamField body="contenido.pasos" type="string[]" required>
+      Ordered list of preparation steps. Must include at least one non-empty step.
+    </ParamField>
+    <ParamField body="contenido.imagenes" type="string[]" required>
+      List of image URLs. Must include at least one non-empty URL.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Response
+
+<ResponseField name="status" type="string" required>
+  `"ok"` on success.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  `"¡Receta cifrada y guardada en la bóveda!"`
+</ResponseField>
+
+### Error responses
+
+| Status | Description |
+|--------|-------------|
+| `500` | Encryption failed or database error. |
+
+### Example
+
+```bash cURL
+curl --request POST \
+  --url https://api.example.com/api/chef/upload \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "id_chef": 1,
+    "titulo": "Tacos de Canasta",
+    "subtitulo": "Receta tradicional",
+    "descripcion": "Los mejores tacos de la CDMX",
+    "tiempo_preparacion": "45",
+    "dificultad": "Media",
+    "porciones": 4,
+    "id_categoria": 1,
+    "contenido": {
+      "ingredientes": [
+        { "nombre": "Tortillas", "cantidad": "12 pzas" }
+      ],
+      "pasos": [
+        "Calentar el comal",
+        "Doblar las tortillas"
+      ],
+      "imagenes": [
+        "https://example.com/img.jpg"
+      ]
+    }
+  }'
+```
+
+```json 200
+{
+  "status": "ok",
+  "message": "¡Receta cifrada y guardada en la bóveda!"
+}
+```
+
+---
+
+## GET /api/chef/recipe/decrypt/:id_receta
+
+Fetches the encrypted vault file for a recipe and decrypts it. Use this endpoint to populate the edit form before updating.
+
+### Path parameters
+
+<ParamField path="id_receta" type="integer" required>
+  The unique identifier of the recipe to decrypt.
+</ParamField>
+
+### Response
+
+<ResponseField name="status" type="string" required>
+  `"ok"` on success.
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  The decrypted recipe content.
+  <Expandable title="properties">
+    <ResponseField name="ingredientes" type="array">
+      List of ingredient objects with `nombre` and `cantidad` fields.
+    </ResponseField>
+    <ResponseField name="pasos" type="string[]">
+      Ordered list of preparation steps.
+    </ResponseField>
+    <ResponseField name="imagenes" type="string[]">
+      List of image URLs.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error responses
+
+| Status | Description |
+|--------|-------------|
+| `404` | Recipe not found, or no encryption key exists for the given `id_receta`. |
+| `500` | Decryption failed or server error. |
+
+### Example
+
+```bash cURL
+curl --request GET \
+  --url https://api.example.com/api/chef/recipe/decrypt/42
+```
+
+```json 200
+{
+  "status": "ok",
+  "data": {
+    "ingredientes": [
+      { "nombre": "Tortillas", "cantidad": "12 pzas" }
+    ],
+    "pasos": [
+      "Calentar el comal",
+      "Doblar las tortillas"
+    ],
+    "imagenes": [
+      "https://example.com/img.jpg"
+    ]
+  }
+}
+```
+
+```json 404
+{
+  "status": "error",
+  "message": "Receta no encontrada"
+}
+```
+
+---
+
+## PUT /api/chef/recipe/:id_receta
+
+Re-encrypts a recipe with a new AES-128 key and updates both the database record and the vault file.
+
+### Path parameters
+
+<ParamField path="id_receta" type="integer" required>
+  The unique identifier of the recipe to update.
+</ParamField>
+
+### Request body
+
+<ParamField body="titulo" type="string" required>
+  Updated recipe title.
+</ParamField>
+
+<ParamField body="subtitulo" type="string" required>
+  Updated subtitle.
+</ParamField>
+
+<ParamField body="descripcion" type="string" required>
+  Updated public description.
+</ParamField>
+
+<ParamField body="tiempo_preparacion" type="string" required>
+  Updated preparation time.
+</ParamField>
+
+<ParamField body="dificultad" type="string" required>
+  Updated difficulty. Accepted values: `"Fácil"`, `"Media"`, `"Difícil"`.
+</ParamField>
+
+<ParamField body="porciones" type="integer" required>
+  Updated number of servings.
+</ParamField>
+
+<ParamField body="id_categoria" type="integer" required>
+  Updated category ID.
+</ParamField>
+
+<ParamField body="contenido" type="object" required>
+  Updated recipe content to be re-encrypted.
+  <Expandable title="properties">
+    <ParamField body="contenido.ingredientes" type="array" required>
+      Must contain at least one entry where both `nombre` and `cantidad` are non-empty strings.
+    </ParamField>
+    <ParamField body="contenido.pasos" type="string[]" required>
+      Must contain at least one non-empty step string.
+    </ParamField>
+    <ParamField body="contenido.imagenes" type="string[]" required>
+      Must contain at least one non-empty image URL string.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<Note>
+  All fields are required. The server returns `400` if any basic field is missing or if `contenido` does not include at least one complete ingredient, one preparation step, and one image URL.
+</Note>
+
+### Response
+
+<ResponseField name="status" type="string" required>
+  `"ok"` on success.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  `"Receta actualizada!!"`
+</ResponseField>
+
+### Error responses
+
+| Status | Description |
+|--------|-------------|
+| `400` | Missing required fields or invalid `contenido` (no complete ingredient, step, or image). |
+| `500` | Re-encryption failed or database error. |
+
+### Example
+
+```bash cURL
+curl --request PUT \
+  --url https://api.example.com/api/chef/recipe/42 \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "titulo": "Tacos de Canasta",
+    "subtitulo": "Receta tradicional actualizada",
+    "descripcion": "Los mejores tacos de la CDMX, ahora con más sabor",
+    "tiempo_preparacion": "50",
+    "dificultad": "Media",
+    "porciones": 6,
+    "id_categoria": 1,
+    "contenido": {
+      "ingredientes": [
+        { "nombre": "Tortillas", "cantidad": "18 pzas" },
+        { "nombre": "Frijoles", "cantidad": "200g" }
+      ],
+      "pasos": [
+        "Calentar el comal a fuego medio",
+        "Rellenar y doblar las tortillas"
+      ],
+      "imagenes": [
+        "https://example.com/tacos-updated.jpg"
+      ]
+    }
+  }'
+```
+
+```json 200
+{
+  "status": "ok",
+  "message": "Receta actualizada!!"
+}
+```
+
+```json 400
+{
+  "status": "error",
+  "message": "Todos los campos básicos son obligatorios."
+}
+```
+
+---
+
+## DELETE /api/chef/recipe/:id_receta
+
+Deletes a recipe record from the database and permanently removes the associated `.enc` file from the vault.
+
+<Warning>
+  This action is permanent. Both the database record and the encrypted `.enc` file are deleted and cannot be recovered. Confirm the recipe ID before calling this endpoint.
+</Warning>
+
+### Path parameters
+
+<ParamField path="id_receta" type="integer" required>
+  The unique identifier of the recipe to delete.
+</ParamField>
+
+### Response
+
+<ResponseField name="status" type="string" required>
+  `"ok"` on success.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  `"Receta y archivo secreto eliminados permanentemente."`
+</ResponseField>
+
+### Error responses
+
+| Status | Description |
+|--------|-------------|
+| `404` | No recipe found with the given `id_receta`. |
+| `500` | Internal server error during deletion. |
+
+### Example
+
+```bash cURL
+curl --request DELETE \
+  --url https://api.example.com/api/chef/recipe/42
+```
+
+```json 200
+{
+  "status": "ok",
+  "message": "Receta y archivo secreto eliminados permanentemente."
+}
+```
+
+```json 404
+{
+  "status": "error",
+  "message": "La receta no existe."
+}
+```

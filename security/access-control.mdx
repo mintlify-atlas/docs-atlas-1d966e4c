@@ -1,0 +1,91 @@
+---
+title: "Access Control"
+description: "How subscription contracts enforce time-limited decryption access"
+---
+
+## The contract model
+
+Access to encrypted recipe content is gated by subscription contracts. A contract binds a subscriber to a specific chef for a fixed period. Without a valid, non-expired contract, the server will not retrieve the AES key and will not perform decryption — no matter what the client sends.
+
+Contracts are created when a subscriber completes a subscription purchase. The valid subscription periods are **3, 6, or 12 months**, enforced by a `CHECK` constraint in the database schema.
+
+## Access verification flow
+
+Every time a subscriber requests recipe content, the server performs a contract check before touching any cryptographic material. The check runs a single SQL query that validates both the relationship and the expiry date simultaneously:
+
+```javascript
+// From backend/src/controllers/subscriberController.js
+const contrato = await pool.query(
+    `SELECT * FROM contrato 
+     WHERE id_usuario = ? AND id_chef = ? 
+     AND estado = 'activo' 
+     AND fecha_fin >= DATE('now')`, 
+    [id_usuario, id_chef]
+);
+
+if (!contrato.length) {
+    return res.status(403).json({ 
+        status: 'expired', 
+        message: 'Acceso denegado. Tu suscripción a este Chef ha expirado o no existe.' 
+    });
+}
+```
+
+If no matching row is found — because the contract is expired, cancelled, or never existed — the server returns `403 Forbidden` immediately. The AES key is never retrieved.
+
+## Contract states
+
+| State | Meaning |
+|---|---|
+| `activo` | Contract is active; access is permitted if `fecha_fin >= DATE('now')` |
+| `expirado` | Contract has passed its end date; access is denied |
+| `cancelado` | Contract was cancelled early; access is denied |
+
+Only contracts with `estado = 'activo'` are considered in the access check. A contract marked `expirado` or `cancelado` is treated identically to having no contract at all.
+
+## What happens at expiry
+
+The date comparison `fecha_fin >= DATE('now')` is evaluated by the database server using the server clock. Once the current date passes `fecha_fin`, the query returns no rows and the subscriber is denied access — automatically, with no application-level cron job or scheduled task required.
+
+There is no client-side enforcement. The subscriber's browser or app cannot override this check.
+
+<Note>
+The server's database clock is the single source of truth for contract validity. There is no client-side enforcement and no way to extend access by manipulating the request.
+</Note>
+
+## The AES key and the client
+
+The symmetric AES key for a recipe is stored in `clave_receta.clave_simetrica_cifrada`. It is only retrieved from the database after the contract check passes. The key is used server-side to call the Python decryption script and is never sent to the client. The client receives only the decrypted recipe content.
+
+<Warning>
+There is no key rotation when a subscription expires. The AES key itself does not change. Access is controlled purely by the contract check at the server layer. This keeps the model simple while still enforcing access server-side — but it means that a subscriber who obtained the key through other means would not lose access purely due to expiry.
+</Warning>
+
+## Full decryption flow for a subscriber
+
+<Steps>
+  <Step title="Subscriber sends a request">
+    Your client sends a POST request to `/api/subscriber/recipe/access` with your user ID and the recipe ID you want to read.
+  </Step>
+  <Step title="Server identifies the recipe's chef">
+    The server queries `receta.id_chef` to find which chef owns the requested recipe. This determines whose subscriber list to check against.
+  </Step>
+  <Step title="Server checks for a valid contract">
+    The server queries `contrato` for a row matching your user ID and the chef's ID, with `estado = 'activo'` and `fecha_fin >= DATE('now')`.
+  </Step>
+  <Step title="403 returned if no valid contract">
+    If no matching contract exists — because it has expired, been cancelled, or never existed — the server returns `403 Forbidden` with `status: 'expired'`. No further processing occurs.
+  </Step>
+  <Step title="AES key retrieved">
+    If a valid contract is found, the server retrieves the recipe's AES key from `clave_receta.clave_simetrica_cifrada`.
+  </Step>
+  <Step title="Encrypted file read from vault">
+    The server reads the corresponding `.enc` file from `external_vault/`, parsing the `nonce` and `ciphertext` fields.
+  </Step>
+  <Step title="Python decryption script called">
+    The server calls `crypto_vault/cipher.py` in decrypt mode, passing the nonce, ciphertext, and AES key. AES-128-GCM decryption is performed and the result is validated against the embedded authentication tag.
+  </Step>
+  <Step title="Decrypted content returned">
+    The decrypted JSON — containing ingredients, preparation steps, and images — is returned to your client as the API response.
+  </Step>
+</Steps>

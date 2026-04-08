@@ -1,0 +1,66 @@
+---
+title: "Confirm Email"
+description: "Activate a new account using the confirmation link sent by email"
+---
+
+`GET /api/users/confirmar/:token`
+
+Activates a new subscriber or chef account by validating the confirmation token sent during registration. This endpoint returns an HTML page, not JSON — it is intended to be opened directly in a browser from the link in the confirmation email.
+
+<Info>
+  The confirmation token is single-use. After a successful confirmation, the token is cleared from the database and the link cannot be used again.
+</Info>
+
+### Path parameters
+
+<ParamField path="token" type="string" required>
+  The 64-character hex confirmation token (32 random bytes) included in the confirmation email link.
+</ParamField>
+
+### Query parameters
+
+<ParamField query="tipo" type="string">
+  Set to `'chef'` to confirm a chef account. Omit this parameter for subscriber accounts. When `tipo=chef`, the token is looked up in the `chef` table instead of the `usuarios` table.
+</ParamField>
+
+### Response
+
+On success, the endpoint returns an HTML page confirming the account type:
+
+```
+¡Cuenta de Suscriptor confirmada!
+Ya puedes cerrar esta pestaña y entrar a la Bóveda.
+```
+
+Or for chef accounts:
+
+```
+¡Cuenta de Chef confirmada!
+Ya puedes cerrar esta pestaña y entrar a la Bóveda.
+```
+
+### Error response
+
+If the token is not found or has already been used, the endpoint returns an HTML error page:
+
+```
+El enlace ha expirado o es inválido.
+```
+
+### Example URLs
+
+Subscriber confirmation (generated automatically during registration):
+
+```
+http://localhost:3000/api/users/confirmar/a3f1c8e2d...9b7f2
+```
+
+Chef confirmation (includes `?tipo=chef` query parameter):
+
+```
+http://localhost:3000/api/users/confirmar/a3f1c8e2d...9b7f2?tipo=chef
+```
+
+<Tip>
+  In development, use [Mailtrap's](https://mailtrap.io) web inbox to view and click confirmation emails without needing a real email inbox. The backend is configured to send via Mailtrap's sandbox SMTP by default.
+</Tip>

@@ -1,0 +1,115 @@
+---
+title: "Managing Recipes"
+description: "Upload, edit, and delete encrypted recipes in your vault"
+---
+
+## Uploading a recipe
+
+<Steps>
+  <Step title="Open the upload form">
+    From your dashboard, click **+ Nueva Receta**. The recipe form opens as a modal.
+  </Step>
+  <Step title="Fill in the metadata">
+    Enter the public-facing details for your recipe:
+
+    - **Título** — the recipe title
+    - **Subtítulo** — a short tagline
+    - **Descripción Pública** — a brief description visible before subscribing
+    - **Tiempo de preparación** — estimated prep time (e.g., `45m`)
+    - **Dificultad** — select Fácil, Media, or Difícil
+    - **Porciones** — number of servings
+    - **Categoría** — select from the available [cooking categories](#cooking-categories)
+
+    <Note>
+      Metadata fields are stored as plaintext. They are visible to all users browsing the vault, including non-subscribers.
+    </Note>
+  </Step>
+  <Step title="Add the encrypted content">
+    In the **Contenido Cifrado** section, fill in the details that only your subscribers will be able to read:
+
+    - **Ingredientes** — add each ingredient with a name and quantity. Click **+ Añadir** to add more rows.
+    - **Preparación** — add each step as a numbered instruction. Click **+ Añadir Paso** to add more.
+    - **Galería de Imágenes** — add image URLs for each photo in your recipe. Click **+ Añadir URL** to add more. A thumbnail preview appears as you type.
+
+    At least one complete ingredient, one preparation step, and one image URL are required before you can submit.
+  </Step>
+  <Step title="Submit the recipe">
+    Click **Cifrar y Publicar**. The platform:
+
+    1. Encrypts the ingredient list, preparation steps, and images using **AES-128-GCM** with a freshly generated random key.
+    2. Saves the encrypted content as a `.enc` file in the external vault.
+    3. Records the recipe metadata and a **SHA-256 integrity hash** of the ciphertext in the database.
+    4. Stores the AES key in the `clave_receta` table, associated with your chef account.
+  </Step>
+  <Step title="Confirm the upload">
+    The modal closes and the recipe appears in your dashboard catalog. Subscribers with an active contract can now access the encrypted content.
+  </Step>
+</Steps>
+
+---
+
+## Editing a recipe
+
+- Click **Editar** on any recipe card in your dashboard.
+- The platform fetches the `.enc` file from the vault, decrypts it using the stored AES key, and pre-fills the recipe form with your existing content.
+- Make any changes to the metadata or encrypted content fields.
+- Click **Re-cifrar y Actualizar** to save.
+
+<Note>
+When you save an edited recipe, the platform generates a **new AES key**, re-encrypts the content, writes a new `.enc` file to the vault, and deletes the old encrypted file. All metadata, the new encrypted file reference, and the new key are updated atomically in the database.
+</Note>
+
+---
+
+## Deleting a recipe
+
+- Click **Borrar** on any recipe card in your dashboard.
+- Confirm the deletion in the prompt that appears.
+
+<Warning>
+Deletion is permanent. Both the database record and the `.enc` file in the external vault are removed immediately and **cannot be recovered**.
+</Warning>
+
+---
+
+## Recipe content structure
+
+Understanding what is encrypted and what is not helps you decide what to put where:
+
+| Field | Storage | Visible to |
+|---|---|---|
+| Title | Plaintext (database) | Everyone |
+| Subtitle | Plaintext (database) | Everyone |
+| Description | Plaintext (database) | Everyone |
+| Prep time | Plaintext (database) | Everyone |
+| Difficulty | Plaintext (database) | Everyone |
+| Servings | Plaintext (database) | Everyone |
+| Category | Plaintext (database) | Everyone |
+| Ingredients | Encrypted (`.enc` file) | Active subscribers only |
+| Preparation steps | Encrypted (`.enc` file) | Active subscribers only |
+| Images | Encrypted (`.enc` file) | Active subscribers only |
+
+---
+
+## Cooking categories
+
+When uploading or editing a recipe, select one of the following 14 categories from the **Categoría** dropdown:
+
+<AccordionGroup>
+  <Accordion title="View all categories">
+    - Mexicana
+    - Italiana
+    - Japonesa
+    - China
+    - Francesa
+    - Mediterránea
+    - Vegetariana
+    - Vegana
+    - Postres y Repostería
+    - Mariscos
+    - Desayunos
+    - Comida Rápida
+    - Bebidas y Coctelería
+    - Cortes de Carne
+  </Accordion>
+</AccordionGroup>

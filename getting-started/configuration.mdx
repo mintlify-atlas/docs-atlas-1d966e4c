@@ -1,0 +1,69 @@
+---
+title: "Configuration"
+description: "Set up your environment variables for local development"
+---
+
+The backend reads its runtime configuration from a `.env` file located in the `backend/` directory. This file is not committed to version control — you create it locally from the provided example.
+
+## Set up your .env file
+
+<Steps>
+
+<Step title="Copy the example file">
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+This creates `backend/.env` with the default values from the example. Open the new file in your editor and adjust the values described below.
+
+</Step>
+
+<Step title="Review each variable">
+
+Here is the full content of `backend/.env.example` with an explanation of each field:
+
+```bash
+PORT=3000
+NODE_ENV=development
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=recetas_db
+DB_PORT=3306
+FRONTEND_URL=http://localhost:5173
+```
+
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | `3000` | The HTTP port the Express server listens on. Change this if port 3000 is already in use on your machine. |
+| `NODE_ENV` | `development` | Controls runtime behavior. Use `development` locally and `production` for deployed environments. |
+| `FRONTEND_URL` | `http://localhost:5173` | The origin used for CORS configuration. The backend allows cross-origin requests from this URL. Update it if you change the frontend port or deploy to a different domain. |
+| `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_PORT` | various | These are legacy fields inherited from an earlier MySQL configuration. The application currently uses SQLite (`backend/recetas.db`) and does not read these values at runtime. You can leave them as-is. |
+
+</Step>
+
+<Step title="Configure your Mailtrap credentials">
+
+RDCS sends email confirmations when users register. In development, these emails are routed through Mailtrap's SMTP sandbox so they never reach real inboxes.
+
+1. Log in to your [Mailtrap](https://mailtrap.io) account.
+2. Open your inbox and navigate to **SMTP Settings**.
+3. Copy the **Host**, **Port**, **Username**, and **Password** values.
+4. Open `backend/src/controllers/userController.js` and update the Mailtrap credentials with your own values.
+
+<Warning>
+  The Mailtrap credentials currently hardcoded in `userController.js` are placeholders for development use only. Replace them with your own credentials before running the project so that email delivery works correctly with your account.
+</Warning>
+
+</Step>
+
+</Steps>
+
+## Database setup
+
+<Info>
+  The SQLite database (`backend/recetas.db`) is created automatically the first time you start the backend server. You do not need to run any database migrations or setup scripts manually.
+</Info>
+
+All tables are initialized with `CREATE TABLE IF NOT EXISTS` statements that run on server startup. If the database file does not exist, SQLite creates it automatically in the `backend/` directory. This means you can reset your local database at any time by deleting `backend/recetas.db` and restarting the server.

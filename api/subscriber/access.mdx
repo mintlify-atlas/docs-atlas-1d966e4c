@@ -1,0 +1,205 @@
+---
+title: "Recipe Access & Subscriptions"
+description: "Subscribe to a chef and access decrypted recipe content"
+---
+
+## Subscribe to a chef
+
+`POST /api/subscriber/subscribe`
+
+Creates an active subscription contract between you and a chef. The endpoint simulates a payment gateway — if the card number is valid, the subscription is created immediately and is active for the selected period.
+
+<Info>
+  This version accepts any 16-digit card number. No real payment processing occurs.
+</Info>
+
+### Request body
+
+<ParamField body="id_usuario" type="integer" required>
+  Your user ID.
+</ParamField>
+
+<ParamField body="id_chef" type="integer" required>
+  The ID of the chef you want to subscribe to.
+</ParamField>
+
+<ParamField body="periodo_meses" type="integer" required>
+  Subscription duration. Must be `3`, `6`, or `12`.
+</ParamField>
+
+<ParamField body="costo" type="number" required>
+  The price paid for the subscription period, as a decimal.
+</ParamField>
+
+<ParamField body="datos_pago" type="object" required>
+  Payment details.
+
+  <Expandable title="properties">
+    <ParamField body="datos_pago.numero_tarjeta" type="string" required>
+      Card number. Must be at least 16 characters. Any 16-digit number is accepted in the current version.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Response
+
+<Tabs>
+  <Tab title="Success (200)">
+    ```json
+    {
+      "status": "ok",
+      "message": "Suscripción de 6 meses activada correctamente."
+    }
+    ```
+
+    <ResponseField name="status" type="string">
+      `'ok'` on success.
+    </ResponseField>
+    <ResponseField name="message" type="string">
+      Confirmation message including the subscription duration in months.
+    </ResponseField>
+  </Tab>
+  <Tab title="Error (400)">
+    Returned when `datos_pago.numero_tarjeta` is missing or fewer than 16 characters.
+
+    ```json
+    {
+      "status": "error",
+      "message": "Pago rechazado: Datos de tarjeta inválidos."
+    }
+    ```
+  </Tab>
+  <Tab title="Error (500)">
+    Returned on an unexpected server error.
+
+    ```json
+    {
+      "status": "error",
+      "message": "<error details>"
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/subscriber/subscribe \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id_usuario": 12,
+    "id_chef": 4,
+    "periodo_meses": 6,
+    "costo": 29.99,
+    "datos_pago": {
+      "numero_tarjeta": "1234567890123456"
+    }
+  }'
+```
+
+---
+
+## Access recipe content
+
+`POST /api/subscriber/recipe/access`
+
+Verifies that you have an active subscription to the recipe's chef and returns the fully decrypted recipe content in a single call. The endpoint handles subscription verification and decryption internally — you do not need to manage encryption keys.
+
+<Info>
+  This endpoint performs the full subscription check and vault decryption in one request. You only need a valid subscription to the chef who created the recipe.
+</Info>
+
+### Request body
+
+<ParamField body="id_usuario" type="integer" required>
+  Your user ID.
+</ParamField>
+
+<ParamField body="id_receta" type="integer" required>
+  The ID of the recipe you want to access.
+</ParamField>
+
+### Response
+
+<Tabs>
+  <Tab title="Success (200)">
+    ```json
+    {
+      "status": "ok",
+      "data": {
+        "ingredientes": [
+          { "nombre": "Albahaca fresca", "cantidad": "50g" }
+        ],
+        "pasos": [
+          "Lavar y secar la albahaca.",
+          "Triturar con aceite de oliva y piñones.",
+          "Mezclar con la pasta cocida."
+        ],
+        "imagenes": [
+          "https://example.com/fotos/pasta-pesto-1.jpg"
+        ]
+      }
+    }
+    ```
+
+    <ResponseField name="status" type="string">
+      `'ok'` on success.
+    </ResponseField>
+    <ResponseField name="data" type="object">
+      The decrypted recipe content.
+
+      <Expandable title="properties">
+        <ResponseField name="ingredientes" type="object[]">
+          List of ingredient objects, each with `nombre` (string) and `cantidad` (string).
+        </ResponseField>
+        <ResponseField name="pasos" type="string[]">
+          Step-by-step preparation instructions as an ordered array of strings.
+        </ResponseField>
+        <ResponseField name="imagenes" type="string[]">
+          URLs of the recipe's photos.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Tab>
+  <Tab title="Error (403)">
+    Your subscription to this chef does not exist or has expired.
+
+    ```json
+    {
+      "status": "expired",
+      "message": "Acceso denegado. Tu suscripción a este Chef ha expirado o no existe."
+    }
+    ```
+  </Tab>
+  <Tab title="Error (404)">
+    The recipe ID does not exist, or the encrypted file is missing from the vault.
+
+    ```json
+    {
+      "message": "Receta no encontrada."
+    }
+    ```
+  </Tab>
+  <Tab title="Error (500)">
+    An unexpected server error occurred during decryption or database access.
+
+    ```json
+    {
+      "status": "error",
+      "message": "Error al procesar el acceso seguro."
+    }
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  If you receive a `403` response with `status: 'expired'`, your subscription to that chef has ended or was never created. Check your active subscriptions and expiry dates with `GET /api/subscriber/my-library/:id_usuario`.
+</Warning>
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/subscriber/recipe/access \
+  -H "Content-Type: application/json" \
+  -d '{"id_usuario": 12, "id_receta": 7}'
+```

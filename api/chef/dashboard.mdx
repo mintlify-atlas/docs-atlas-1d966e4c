@@ -1,0 +1,219 @@
+---
+title: "Chef Dashboard"
+description: "Get chef profile, recipe catalog, and subscriber list"
+---
+
+## GET /api/chef/dashboard/:id_chef
+
+Returns the chef's full profile, their complete recipe catalog, and their list of active subscribers in a single response.
+
+### Path parameters
+
+<ParamField path="id_chef" type="integer" required>
+  The unique identifier of the chef.
+</ParamField>
+
+### Response
+
+<ResponseField name="status" type="string" required>
+  `"ok"` on success.
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  <Expandable title="properties" defaultOpen>
+    <ResponseField name="perfil" type="object" required>
+      The chef's public profile record.
+      <Expandable title="properties">
+        <ResponseField name="id_chef" type="integer">
+          Unique chef identifier.
+        </ResponseField>
+        <ResponseField name="nombre" type="string">
+          The chef's display name.
+        </ResponseField>
+        <ResponseField name="correo" type="string">
+          The chef's registered email address.
+        </ResponseField>
+        <ResponseField name="descripcion" type="string">
+          A short public bio written by the chef.
+        </ResponseField>
+        <ResponseField name="foto_url" type="string">
+          URL of the chef's profile photo.
+        </ResponseField>
+        <ResponseField name="estrellas" type="integer">
+          Star rating out of 5.
+        </ResponseField>
+        <ResponseField name="fecha_registro" type="string">
+          Account registration date.
+        </ResponseField>
+        <ResponseField name="confirmado" type="integer">
+          `1` if the account has been confirmed, `0` otherwise.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="recetas" type="array">
+      All recipes published by the chef.
+      <Expandable title="properties">
+        <ResponseField name="[all receta columns]" type="mixed">
+          All columns from the `receta` table (e.g., `id_receta`, `titulo`, `subtitulo`, `descripcion`, `tiempo_preparacion`, `dificultad`, `porciones`, `hash_archivo`, `url_archivo_cifrado`).
+        </ResponseField>
+        <ResponseField name="categoria_nombre" type="string">
+          Name of the cooking category joined from `categorias_cocina`.
+        </ResponseField>
+        <ResponseField name="favoritos" type="integer">
+          Count of subscribers who have favorited this recipe.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="suscriptores" type="array">
+      Active subscribers with a currently valid contract.
+      <Expandable title="properties">
+        <ResponseField name="nombre" type="string">
+          Subscriber's full name.
+        </ResponseField>
+        <ResponseField name="correo" type="string">
+          Subscriber's email address.
+        </ResponseField>
+        <ResponseField name="fecha_fin" type="string">
+          Contract expiry date.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Note>
+  `suscriptores` only includes contracts where `estado = 'active'` in the chef dashboard query. Note that contracts are created with `estado = 'activo'` (Spanish) by the subscribe endpoint — this is a known inconsistency in the source that may cause the subscriber list to appear empty.
+</Note>
+
+### Error responses
+
+| Status | Description |
+|--------|-------------|
+| `404` | No chef found with the given `id_chef`. |
+| `500` | Internal server error. |
+
+### Example
+
+```bash cURL
+curl --request GET \
+  --url https://api.example.com/api/chef/dashboard/1
+```
+
+```json 200
+{
+  "status": "ok",
+  "data": {
+    "perfil": {
+      "id_chef": 1,
+      "nombre": "María García",
+      "correo": "maria@example.com",
+      "descripcion": "Chef especializada en cocina tradicional mexicana.",
+      "foto_url": "https://example.com/photos/maria.jpg",
+      "estrellas": 5,
+      "fecha_registro": "2024-01-15",
+      "confirmado": 1
+    },
+    "recetas": [
+      {
+        "id_receta": 42,
+        "titulo": "Tacos de Canasta",
+        "subtitulo": "Receta tradicional",
+        "descripcion": "Los mejores tacos de la CDMX",
+        "tiempo_preparacion": "45",
+        "dificultad": "Media",
+        "porciones": 4,
+        "categoria_nombre": "Mexicana",
+        "favoritos": 17
+      }
+    ],
+    "suscriptores": [
+      {
+        "nombre": "Carlos López",
+        "correo": "carlos@example.com",
+        "fecha_fin": "2025-06-30"
+      }
+    ]
+  }
+}
+```
+
+```json 404
+{
+  "status": "error",
+  "message": "El Chef con ID 99 no existe en la base de datos."
+}
+```
+
+---
+
+## GET /api/chef/categorias
+
+Returns all available cooking categories. Use this endpoint to populate the category selector when uploading or editing a recipe.
+
+### Response
+
+<ResponseField name="status" type="string" required>
+  `"ok"` on success.
+</ResponseField>
+
+<ResponseField name="data" type="array" required>
+  List of cooking categories.
+  <Expandable title="properties">
+    <ResponseField name="id_categoria" type="integer">
+      Unique category identifier.
+    </ResponseField>
+    <ResponseField name="nombre" type="string">
+      Category name.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Available categories
+
+The platform includes 14 fixed categories:
+
+| id_categoria | nombre |
+|---|---|
+| — | Bebidas y Coctelería |
+| — | China |
+| — | Comida Rápida |
+| — | Cortes de Carne |
+| — | Desayunos |
+| — | Francesa |
+| — | Italiana |
+| — | Japonesa |
+| — | Mariscos |
+| — | Mediterránea |
+| — | Mexicana |
+| — | Postres y Repostería |
+| — | Vegetariana |
+| — | Vegana |
+
+### Example
+
+```bash cURL
+curl --request GET \
+  --url https://api.example.com/api/chef/categorias
+```
+
+```json 200
+{
+  "status": "ok",
+  "data": [
+    { "id_categoria": 1, "nombre": "Bebidas y Coctelería" },
+    { "id_categoria": 2, "nombre": "China" },
+    { "id_categoria": 3, "nombre": "Comida Rápida" },
+    { "id_categoria": 4, "nombre": "Cortes de Carne" },
+    { "id_categoria": 5, "nombre": "Desayunos" },
+    { "id_categoria": 6, "nombre": "Francesa" },
+    { "id_categoria": 7, "nombre": "Italiana" },
+    { "id_categoria": 8, "nombre": "Japonesa" },
+    { "id_categoria": 9, "nombre": "Mariscos" },
+    { "id_categoria": 10, "nombre": "Mediterránea" },
+    { "id_categoria": 11, "nombre": "Mexicana" },
+    { "id_categoria": 12, "nombre": "Postres y Repostería" },
+    { "id_categoria": 13, "nombre": "Vegetariana" },
+    { "id_categoria": 14, "nombre": "Vegana" }
+  ]
+}
+```

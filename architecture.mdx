@@ -1,0 +1,114 @@
+---
+title: "System Architecture"
+description: "How the frontend, backend, cryptographic engine, and database interconnect"
+---
+
+RDCS is built from four layers: a React frontend, a Node.js/Express backend, a Python cryptographic engine, and a SQLite database. The backend also writes encrypted recipe files to an external vault directory. All cryptographic operations are deliberately isolated in the Python layer — the Node.js process never performs encryption or key derivation directly.
+
+## System diagram
+
+```text
+┌─────────────────────┐      ┌─────────────────────┐      ┌─────────────────────┐
+│   CLIENTE (Web)     │      │   SERVIDOR (API)    │      │    PERSISTENCIA     │
+│                     │      │                     │      │                     │
+│ • React + Tailwind  │ ───► │ • Node.js + Express │ ───► │ • SQLite (DB Local) │
+│ • Axios (API Cons.) │      │ • Nodemailer (Mail) │      │ • recetas.db        │
+└─────────────────────┘      └──────────┬──────────┘      └─────────────────────┘
+                                        │
+                                        ▼
+                             ┌─────────────────────┐
+                             │ MOTOR CRIPTOGRÁFICO │
+                             │      (PYTHON)       │
+                             │ • PyCryptodome      │
+                             │ • ECDSA / AES-GCM   │
+                             └─────────────────────┘
+```
+
+## Layer breakdown
+
+**React + Tailwind CSS frontend** — Delivers role-based dashboards for chefs and subscribers. Communicates with the backend exclusively through Axios HTTP calls. The frontend never touches cryptographic material directly; it submits passwords and recipe content to the API and receives decrypted output in return.
+
+**Node.js + Express backend** — Handles routing, authentication middleware, database queries, and email dispatch via Nodemailer. When a request requires cryptography, the backend spawns a Python child process, passes arguments on the command line, reads the JSON result from stdout, and returns it to the caller. This bridge pattern keeps the crypto engine cleanly separated.
+
+**Python cryptographic engine (`/crypto_vault`)** — Two scripts handle all sensitive operations:
+- `keys.py` — generates ECDSA P-256 key pairs, derives AES keys via PBKDF2, and encrypts/decrypts private keys with AES-128-GCM
+- `cipher.py` — encrypts and decrypts recipe content using AES-128-GCM with a per-recipe symmetric key
+
+**SQLite database (`recetas.db`)** — Stores all persistent state: user and chef identities (including encrypted private keys, salts, and nonces), recipe metadata, subscription contracts, symmetric key ciphertexts, favorites, and cuisine categories. Foreign keys are enforced via `PRAGMA foreign_keys = ON`.
+
+**External vault** — Encrypted recipe files (`.enc`) are stored outside the database as files. Each file's SHA-256 hash is saved in the `receta` table so the backend can verify integrity before decryption.
+
+## Node.js-to-Python bridge
+
+The backend uses Node.js's `child_process.spawn` to call Python scripts. This means crypto operations run in a separate OS process with its own memory space — Node.js cannot accidentally leak key material between requests. The Python process writes its result as JSON to stdout; Node.js collects the output, parses it, and either stores it in the database or returns it in the API response.
+
+<Info>
+This architecture means the Python engine has no persistent state. Each cryptographic operation is a stateless subprocess call — there is no shared memory between requests.
+</Info>
+
+## Data flows
+
+### Registration
+
+<Steps>
+  <Step title="Submit credentials">
+    You send your name, email, and password to `POST /api/users/register` (or `POST /api/users/register-chef` for chefs).
+  </Step>
+  <Step title="Key generation in Python">
+    The backend spawns `keys.py generate <password>`. Python generates an ECDSA P-256 key pair, derives a 128-bit AES key from your password using PBKDF2-SHA256 (100,000 iterations, 16-byte random salt), and encrypts the private key PEM with AES-128-GCM using a 12-byte random nonce. The public key PEM, encrypted private key hex, salt hex, and nonce hex are returned as JSON.
+  </Step>
+  <Step title="Store in database">
+    Node.js hashes your password with bcrypt, generates a 32-byte random email confirmation token, and inserts everything into the `usuarios` (or `chef`) table: public key, encrypted private key, salt, nonce, bcrypt hash, and confirmation token.
+  </Step>
+  <Step title="Email confirmation">
+    Nodemailer sends a confirmation link containing the token. You click the link to activate your account. The token is cleared from the database upon confirmation.
+  </Step>
+</Steps>
+
+### Login
+
+<Steps>
+  <Step title="Submit credentials">
+    You send your email and password to `POST /api/users/login`.
+  </Step>
+  <Step title="Password verification">
+    The backend looks up your record in `usuarios` or `chef` and verifies your password against the bcrypt hash stored at registration.
+  </Step>
+  <Step title="Private key decryption check">
+    The backend spawns `keys.py decrypt <password> <encrypted_key_hex> <salt_hex> <nonce_hex>`. Python re-derives the AES key from your password and salt using PBKDF2, then decrypts the private key ciphertext with AES-128-GCM. A successful decryption proves your password is correct and your key material is intact.
+  </Step>
+  <Step title="Session established">
+    The API returns your user ID, name, and role (`usuario` or `chef`). The decrypted private key is not persisted — it exists only for the duration of the Python subprocess.
+  </Step>
+</Steps>
+
+### Recipe upload
+
+<Steps>
+  <Step title="Chef submits recipe">
+    You send recipe metadata (title, description, category, etc.) and content to `POST /api/chef/upload`.
+  </Step>
+  <Step title="AES key generation and content encryption">
+    The backend generates a random 128-bit AES key and spawns `cipher.py encrypt <content_json> <key_hex>`. Python encrypts the content with AES-128-GCM using a fresh 12-byte nonce and returns the nonce and ciphertext as hex strings.
+  </Step>
+  <Step title="File written to vault">
+    The encrypted file is saved to the external vault directory. A SHA-256 hash of the file is computed and stored in the `receta` table alongside recipe metadata.
+  </Step>
+  <Step title="Symmetric key stored">
+    The plaintext AES key is stored in the `clave_receta` table, associated with the chef's ID and the recipe ID. Access to this key is gated by the contract check — the key is only retrieved after a valid subscription is verified.
+  </Step>
+</Steps>
+
+### Recipe access
+
+<Steps>
+  <Step title="Subscriber requests a recipe">
+    You send a POST request to `/api/subscriber/recipe/access` with your user ID and the recipe ID.
+  </Step>
+  <Step title="Contract validation">
+    The backend queries the `contrato` table for a record linking your `id_usuario` and the recipe's `id_chef` with `estado = 'activo'` and `fecha_fin >= DATE('now')`. If no valid contract exists, the request is rejected with a 403 before any decryption occurs.
+  </Step>
+  <Step title="Content decryption">
+    The backend retrieves the AES key from `clave_receta`, reads the `.enc` file from the vault, spawns `cipher.py decrypt <nonce_hex> <ciphertext_hex> <key_hex>`, and returns the plaintext recipe JSON to you.
+  </Step>
+</Steps>

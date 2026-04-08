@@ -1,0 +1,60 @@
+---
+title: "Reading Recipes"
+description: "Access, decrypt, and save encrypted recipe content"
+---
+
+Recipe content on RDCS is stored encrypted. When you open a recipe, the platform verifies your subscription in real time and — if your contract is active and non-expired — decrypts the content before displaying it to you.
+
+## How access works
+
+Every time you request a recipe, the platform checks two conditions:
+
+1. You have an active contract (`estado = 'activo'`) with the chef who published the recipe.
+2. Your contract's end date (`fecha_fin`) is today or later.
+
+If both conditions are met, the encrypted content is decrypted and returned. If either condition fails, access is denied.
+
+## Reading a recipe
+
+<Steps>
+  <Step title="Find a recipe">
+    Browse the vault and locate a recipe from a chef you are subscribed to. Subscribed recipes show an **Abrir Receta** button instead of the lock icon.
+  </Step>
+  <Step title="Open the recipe">
+    Click **Abrir Receta** to open the recipe.
+  </Step>
+  <Step title="Verification">
+    The platform silently verifies your subscription status in the background. This happens automatically — no action is required from you.
+  </Step>
+  <Step title="Read the content">
+    The decrypted recipe content is displayed, including the full ingredient list with quantities, numbered preparation steps, and images.
+  </Step>
+</Steps>
+
+## What the recipe shows
+
+Once decrypted, a recipe displays:
+
+- **Ingredients** — a list of all ingredients with their quantities
+- **Preparation steps** — numbered instructions from start to finish
+- **Images** — photos of the dish and preparation process
+
+## Saving to your cookbook
+
+Click the heart (favorite) icon on any recipe you have access to. The recipe is saved to **My Library** under your personal cookbook for quick access later.
+
+<Info>
+  Your cookbook persists across sessions. Favorited recipes remain in your cookbook as long as your account exists, and you can access your library at any time from the dashboard.
+</Info>
+
+## Removing a recipe from your cookbook
+
+Click the heart icon again to toggle it off. This removes the recipe from your favorites list but does not affect your subscription — you can still access the recipe through the vault while your contract is active.
+
+## When access is denied
+
+If your subscription to a chef has expired and you try to open one of their recipes, the platform returns an access denied message. The recipe entry stays in your cookbook, but you cannot decrypt the content until you renew your subscription.
+
+<Warning>
+  An expired subscription blocks access immediately. Favorites from that chef remain visible in your cookbook, but the encrypted content cannot be displayed until you subscribe again. See [Subscriptions](/subscriber/subscriptions) to renew.
+</Warning>

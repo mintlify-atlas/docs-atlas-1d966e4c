@@ -1,0 +1,114 @@
+---
+title: "Recipe Encryption"
+description: "How AES-128-GCM protects recipe content in the external vault"
+---
+
+## Two-layer encryption model
+
+RDCS uses two separate encryption layers:
+
+1. **Identity layer** — your ECDSA private key is encrypted with a key derived from your password. See [Key Generation](/security/key-generation).
+2. **Content layer** — each recipe's content is encrypted with a unique per-recipe AES-128 key, stored separately from the encrypted file.
+
+These two layers are independent. Compromising one does not automatically compromise the other.
+
+## Recipe upload encryption flow
+
+When you upload a recipe, the server generates a fresh 128-bit AES key using Node.js's cryptographic random number generator, then calls the Python cipher module to encrypt the recipe content:
+
+```javascript
+// From backend/src/controllers/chefController.js
+const aesKey = crypto.randomBytes(16).toString('hex');
+const encryptedData = await encryptContent(contenido, aesKey);
+const hash = crypto.createHash('sha256').update(encryptedData.ciphertext).digest('hex');
+```
+
+The Python `encrypt_content` function performs the actual AES-128-GCM encryption:
+
+```python
+# From crypto_vault/cipher.py
+def encrypt_content(data_json, key_hex):
+    key = bytes.fromhex(key_hex)
+    aesgcm = AESGCM(key)
+    nonce = os.urandom(12)
+    ciphertext = aesgcm.encrypt(nonce, data_json.encode('utf-8'), None)
+    return {
+        "nonce": nonce.hex(),
+        "ciphertext": ciphertext.hex()
+    }
+```
+
+A fresh 12-byte nonce is generated for every encryption call using `os.urandom`. No two recipes share the same nonce, even if they share the same AES key.
+
+## Encrypted file format
+
+Encrypted recipes are written to `external_vault/` as JSON files named `recipe_<TIMESTAMP>.enc`. Each file contains exactly two fields:
+
+```json
+{
+  "nonce": "<12-byte nonce as hex>",
+  "ciphertext": "<encrypted content as hex>"
+}
+```
+
+The file contains no metadata, no recipe title, and no identifiers. The link between a file and its recipe record is maintained only in the database (`receta.url_archivo_cifrado`).
+
+## What is encrypted vs plaintext
+
+Not all recipe data goes into the encrypted file. The fields split as follows:
+
+| Field | Where it lives | Encrypted |
+|---|---|---|
+| Ingredients (`ingredientes`) | `.enc` file in vault | Yes |
+| Preparation steps (`pasos`) | `.enc` file in vault | Yes |
+| Images (`imagenes`) | `.enc` file in vault | Yes |
+| Title (`titulo`) | Database (`receta`) | No |
+| Subtitle (`subtitulo`) | Database (`receta`) | No |
+| Description (`descripcion`) | Database (`receta`) | No |
+| Difficulty (`dificultad`) | Database (`receta`) | No |
+| Prep time (`tiempo_preparacion`) | Database (`receta`) | No |
+| Category (`id_categoria`) | Database (`receta`) | No |
+
+Public metadata stays in the database so subscribers can browse and search recipes before deciding to subscribe. The actual culinary content — what you pay for — is locked in the vault.
+
+## AES-GCM authenticated encryption
+
+AES-GCM provides both **confidentiality** and **integrity**. The ciphertext includes an authentication tag that is verified on decryption. If anyone tampers with the bytes inside the `.enc` file — even a single bit — decryption fails with an authentication error rather than silently returning corrupted data.
+
+```python
+# From crypto_vault/cipher.py
+def decrypt_content(nonce_hex, ciphertext_hex, key_hex):
+    key = bytes.fromhex(key_hex)
+    nonce = bytes.fromhex(nonce_hex)
+    ciphertext = bytes.fromhex(ciphertext_hex)
+    aesgcm = AESGCM(key)
+    decrypted_data = aesgcm.decrypt(nonce, ciphertext, None)
+    return decrypted_data.decode('utf-8')
+```
+
+## SHA-256 integrity hash
+
+In addition to the GCM tag embedded in the ciphertext, the server computes a SHA-256 hash of the raw ciphertext and stores it in `receta.hash_archivo`:
+
+```javascript
+// From backend/src/controllers/chefController.js
+const hash = crypto.createHash('sha256').update(encryptedData.ciphertext).digest('hex');
+```
+
+This hash is stored in the database at upload time. It provides a second layer of tamper detection at the file level — you can detect whether the `.enc` file on disk has been replaced or modified outside of the application.
+
+<Info>
+AES-GCM's built-in tag detects byte-level tampering within a file. The SHA-256 hash detects file-level replacement. Together they cover both threat vectors.
+</Info>
+
+## Recipe editing
+
+When you edit a recipe, the platform does not patch the existing encrypted file — it performs a full re-encryption cycle:
+
+1. A completely new AES key is generated with `crypto.randomBytes(16)`.
+2. The updated content is encrypted into a new `.enc` file with a new nonce.
+3. The database record is updated with the new filename and new SHA-256 hash.
+4. The new AES key replaces the old one in `clave_receta`.
+5. The old `.enc` file is deleted from `external_vault/`.
+
+This means old ciphertexts do not persist after an edit, and each version of a recipe uses a fresh key and nonce.

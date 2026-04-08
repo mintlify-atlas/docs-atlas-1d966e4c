@@ -1,0 +1,69 @@
+---
+title: "Chef Dashboard"
+description: "View your recipes, active subscribers, and profile"
+---
+
+The chef dashboard is your main hub after logging in. It loads your full profile, your complete recipe catalog, and your active subscriber list in a single view.
+
+## Profile section
+
+At the top of the dashboard, your profile card displays:
+
+- **Name** — your chef name as registered
+- **Description** — a short bio visible to subscribers (editable)
+- **Photo** — loaded from your profile photo URL (editable)
+- **Star rating** — your current rating out of 5 stars (editable)
+
+Click **Editar Perfil** to update your description, photo URL, or star rating. Click **Guardar** to save, or **Cancelar** to discard changes.
+
+## Your recipe catalog
+
+The main section of the dashboard lists all your published recipes. Each recipe card shows:
+
+| Field | Description |
+|---|---|
+| **Title** | The recipe's public title |
+| **Subtitle** | A short tagline |
+| **Description** | A brief public description (plaintext) |
+| **Category** | The cooking category (e.g., Mexicana, Italiana) |
+| **Difficulty** | Fácil, Media, or Difícil |
+| **Prep time** | Estimated preparation time |
+| **Fans** | Number of subscribers who have favorited the recipe |
+
+<Info>
+The actual recipe content — ingredients, preparation steps, and images — is encrypted and stored in the secure vault. It is not displayed on the dashboard card.
+</Info>
+
+### Quick actions per recipe
+
+From each recipe card you can:
+
+- **Editar** — fetch and decrypt the recipe content into an edit form, make changes, then re-encrypt and save
+- **Borrar** — permanently delete the recipe record and its encrypted file from the vault
+
+## Active subscribers
+
+The right panel lists every subscriber who currently has an active contract to your content. For each subscriber you can see:
+
+- **Name**
+- **Email**
+- **Contract expiry date** (shown as `Vence: <date>`)
+
+Subscribers whose contracts have expired do not appear in this list.
+
+## Quick actions from the dashboard
+
+<CardGroup cols={2}>
+  <Card title="Upload a recipe" icon="upload">
+    Click **+ Nueva Receta** to open the recipe form. Fill in metadata and encrypted content, then submit to encrypt and publish.
+  </Card>
+  <Card title="Edit a recipe" icon="pen-to-square">
+    Click **Editar** on any recipe card. The platform decrypts the content for you to modify, then re-encrypts on save.
+  </Card>
+  <Card title="Delete a recipe" icon="trash">
+    Click **Borrar** on any recipe card. Both the database record and the `.enc` vault file are removed permanently.
+  </Card>
+  <Card title="Update your profile" icon="user">
+    Click **Editar Perfil** in the profile section to update your description, photo URL, or star rating.
+  </Card>
+</CardGroup>

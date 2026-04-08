@@ -1,97 +1,72 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Recetas Deliciosas Como Servicio"
+description: "A secure culinary subscription platform — chefs publish encrypted recipes, subscribers access them through cryptographically enforced contracts."
 ---
 
-## Setting up
+Welcome to **Recetas Deliciosas Como Servicio (RDCS)**, a web platform where chefs share exclusive recipes through a secure subscription model. Every recipe is encrypted with AES-128-GCM and only subscribers with an active contract can decrypt and read the content — even the server operator cannot access recipes without authorization.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Quick Setup" icon="rocket" href="/getting-started/prerequisites">
+    Install dependencies and run the platform in minutes
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Chef Guide" icon="utensils" href="/chef/registration">
+    Register as a chef, upload encrypted recipes, and manage subscribers
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Subscriber Guide" icon="book-open" href="/subscriber/registration">
+    Create an account, subscribe to chefs, and access exclusive recipes
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="API Reference" icon="code" href="/api/auth/register">
+    Full REST API documentation with request and response schemas
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## How it works
 
-Everything you need to create world-class documentation.
+<Steps>
+  <Step title="Create an account">
+    Register as a **chef** or **subscriber**. During registration, an ECDSA P-256 key pair is generated for you. Your private key is encrypted with your password using PBKDF2 + AES-128-GCM before being stored — only you can unlock it.
+  </Step>
+  <Step title="Confirm your email">
+    A confirmation link is sent to your inbox via a 32-byte random token. Click it to activate your account.
+  </Step>
+  <Step title="Chefs publish, subscribers subscribe">
+    Chefs upload recipe content which is automatically encrypted with a unique AES-128-GCM key before being stored in the external vault. Subscribers browse the recipe catalog and purchase subscriptions (3, 6, or 12 months) to their chosen chef.
+  </Step>
+  <Step title="Access encrypted content">
+    Subscribers with an active contract can request decrypted recipe content. The platform verifies the contract's expiry date before returning the plaintext — once a subscription lapses, access is automatically revoked.
+  </Step>
+</Steps>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Key features
 
-## Need inspiration?
+<CardGroup cols={2}>
+  <Card title="Hybrid cryptography" icon="lock">
+    ECDSA P-256 identity keys protected per-user with PBKDF2 + AES-128-GCM. No master key — only your password unlocks your identity.
+  </Card>
+  <Card title="Encrypted recipe vault" icon="shield">
+    Recipe files are stored as `.enc` files in an external vault. Each recipe has a unique AES-128-GCM key. SHA-256 hashes verify file integrity.
+  </Card>
+  <Card title="Time-limited access" icon="clock">
+    Subscription contracts enforce 3, 6, or 12-month access periods. Decryption is denied automatically once a contract expires.
+  </Card>
+  <Card title="Zero-knowledge partial model" icon="eye-slash">
+    The server stores encrypted private keys and ciphertexts only. Neither the server operator nor network observers can read recipe content.
+  </Card>
+</CardGroup>
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+## Security deep dives
+
+<CardGroup cols={2}>
+  <Card title="Security model" icon="shield-halved" href="/security-model">
+    Understand the trust model and cryptographic guarantees
+  </Card>
+  <Card title="Key generation" icon="key" href="/security/key-generation">
+    How ECDSA keys are generated and protected with your password
+  </Card>
+  <Card title="Recipe encryption" icon="file-lock" href="/security/recipe-encryption">
+    AES-128-GCM encryption flow for recipe content
+  </Card>
+  <Card title="Access control" icon="door-closed" href="/security/access-control">
+    How subscription expiry enforces cryptographic access revocation
+  </Card>
+</CardGroup>

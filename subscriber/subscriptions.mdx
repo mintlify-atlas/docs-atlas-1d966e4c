@@ -1,0 +1,57 @@
+---
+title: "Subscriptions"
+description: "Subscribe to a chef and manage your active contracts"
+---
+
+A subscription gives you access to all encrypted recipes from a specific chef for the duration of your contract. Each subscription is a contract between you and a chef — it has a fixed start date, an end date, and a status.
+
+## Subscription periods
+
+When subscribing, you choose one of three contract lengths: **3 months**, **6 months**, or **12 months**. These are the only valid periods — the database schema enforces this with a `CHECK` constraint.
+
+<Note>
+  Pricing is set by each chef and passed as the `costo` field when creating a subscription. There are no platform-defined fixed prices.
+</Note>
+
+## How to subscribe
+
+<Steps>
+  <Step title="Find a chef">
+    Locate a chef whose recipes you want to access. You can find chefs through the vault by browsing or searching recipes, or by clicking on a recipe that interests you.
+  </Step>
+  <Step title="Click Subscribe">
+    On a recipe that belongs to an unsubscribed chef, click **Desbloquear Contenido**. The subscription modal opens showing the available periods.
+  </Step>
+  <Step title="Choose a period">
+    Select your preferred subscription length: 3, 6, or 12 months.
+  </Step>
+  <Step title="Enter payment details">
+    Enter a 16-digit card number in the payment field. The platform validates that the card number has at least 16 digits before proceeding.
+  </Step>
+  <Step title="Confirm">
+    Click **Confirmar Pago Simulado**. A contract is created automatically with today as the start date and the expiry date calculated from your chosen period.
+  </Step>
+</Steps>
+
+Your subscription becomes active immediately. You can now open and read all encrypted recipes from that chef.
+
+<Note>
+  The payment flow is a simulation. In the current version, any 16-digit card number is accepted. No real payment is processed.
+</Note>
+
+## Viewing your subscriptions
+
+Go to **My Library** to see all your active subscriptions. Each entry shows:
+
+- Chef name and photo
+- Contract start date (`fecha_inicio`)
+- Contract expiry date (`fecha_fin`)
+- Contract status (`activo`)
+
+## When a subscription expires
+
+Once your contract's end date passes, the platform automatically denies all decryption requests for that chef's recipes. When you try to open a recipe, you will see an access denied message instead of the content.
+
+<Warning>
+  There is no auto-renewal. When your subscription expires, you must manually subscribe again to regain access to that chef's recipes.
+</Warning>

@@ -1,0 +1,116 @@
+{
+  "projectType": "saas",
+  "projectName": "Recetas Deliciosas Como Servicio",
+  "projectDescription": "A secure culinary subscription platform where chefs publish AES-128-GCM encrypted recipes and subscribers gain time-limited access through cryptographically enforced contracts.",
+  "theme": "almond",
+  "primaryColor": "#848c8e",
+  "lightColor": "#11161e",
+  "darkColor": "#cfd0d2",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "introduction",
+              "architecture",
+              "security-model"
+            ]
+          },
+          {
+            "group": "Getting Started",
+            "pages": [
+              "getting-started/prerequisites",
+              "getting-started/installation",
+              "getting-started/configuration"
+            ]
+          },
+          {
+            "group": "Chef Guide",
+            "pages": [
+              "chef/registration",
+              "chef/dashboard",
+              "chef/managing-recipes"
+            ]
+          },
+          {
+            "group": "Subscriber Guide",
+            "pages": [
+              "subscriber/registration",
+              "subscriber/explore-vault",
+              "subscriber/subscriptions",
+              "subscriber/reading-recipes"
+            ]
+          },
+          {
+            "group": "Security & Cryptography",
+            "pages": [
+              "security/key-generation",
+              "security/recipe-encryption",
+              "security/access-control"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Authentication",
+            "pages": [
+              "api/auth/register",
+              "api/auth/login",
+              "api/auth/confirm-email"
+            ]
+          },
+          {
+            "group": "Chef Endpoints",
+            "pages": [
+              "api/chef/dashboard",
+              "api/chef/recipes",
+              "api/chef/profile"
+            ]
+          },
+          {
+            "group": "Subscriber Endpoints",
+            "pages": [
+              "api/subscriber/explore",
+              "api/subscriber/library",
+              "api/subscriber/access"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Hybrid cryptography: ECDSA P-256 identity keys protected with PBKDF2 + AES-128-GCM per user password",
+    "Recipe content encrypted with AES-128-GCM via Python PyCryptodome engine",
+    "Time-limited subscription contracts (3, 6, or 12 months) enforcing access expiration cryptographically",
+    "SHA-256 integrity verification for all stored recipe files in the external vault",
+    "Email confirmation via Mailtrap using 32-byte random dynamic tokens",
+    "Dual-role system: chefs upload and manage encrypted recipes; subscribers browse and access them",
+    "React + Tailwind CSS frontend with role-based dashboards for chefs and subscribers",
+    "Node.js/Express backend bridging to Python cryptographic scripts for all sensitive operations"
+  ],
+  "publicApiSurface": [
+    "POST /api/users/register — Register subscriber with ECDSA key generation",
+    "POST /api/users/register-chef — Register chef with ECDSA key generation",
+    "POST /api/users/login — Authenticate and decrypt private key in memory",
+    "GET /api/users/confirmar/:token — Confirm account via email token",
+    "GET /api/chef/dashboard/:id_chef — Get chef stats, recipes, and active subscribers",
+    "PUT /api/chef/profile/:id_chef — Update chef profile (description, photo, stars)",
+    "POST /api/chef/upload — Upload and AES-128-GCM encrypt a new recipe",
+    "GET /api/chef/recipe/decrypt/:id_receta — Decrypt and retrieve a recipe (chef access)",
+    "PUT /api/chef/recipe/:id_receta — Re-encrypt and update an existing recipe",
+    "DELETE /api/chef/recipe/:id_receta — Delete a recipe and its encrypted vault file",
+    "GET /api/chef/categorias — List all cooking categories",
+    "GET /api/subscriber/explore — Browse recipes with search/filter",
+    "GET /api/subscriber/my-library/:id_usuario — Get subscriptions and favorites",
+    "POST /api/subscriber/subscribe — Create a subscription contract",
+    "POST /api/subscriber/favorite/toggle — Add or remove a recipe from favorites",
+    "POST /api/subscriber/recipe/access — Verify subscription and decrypt recipe for subscriber"
+  ]
+}

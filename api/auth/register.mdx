@@ -1,0 +1,146 @@
+---
+title: "Register"
+description: "Create a new subscriber or chef account"
+---
+
+Two endpoints handle account registration: one for subscribers and one for chefs. Both require the same fields, generate an ECDSA P-256 key pair, hash the password with bcrypt, and send a confirmation email before the account becomes active.
+
+<Info>
+  After registration, your account is inactive until you click the confirmation link sent to your email. You cannot log in until the account is confirmed.
+</Info>
+
+---
+
+## Register a subscriber
+
+`POST /api/users/register`
+
+Creates a new subscriber account in the `usuarios` table.
+
+### Request body
+
+<ParamField body="nombre" type="string" required>
+  The user's display name.
+</ParamField>
+
+<ParamField body="correo" type="string" required>
+  The user's email address. Must be unique across all accounts.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The user's password. Used both to hash the credential with bcrypt (10 rounds) and to derive the AES key that encrypts the ECDSA private key via PBKDF2.
+</ParamField>
+
+### Response
+
+<ResponseField name="status" type="string">
+  `'ok'` on success.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  `'¡Registro exitoso! Revisa tu correo para confirmar tu cuenta.'`
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="id_usuario" type="string">
+      The confirmation token (64 hex characters). This is not a persistent user ID — use the `id` returned from `/api/users/login` for subsequent requests.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/users/register \
+  -H "Content-Type: application/json" \
+  -d '{"nombre": "María García", "correo": "maria@example.com", "password": "mySecurePass123"}'
+```
+
+### Error responses
+
+<AccordionGroup>
+  <Accordion title="400 — Missing fields">
+    One or more required fields (`nombre`, `correo`, `password`) were not provided.
+
+    ```json
+    { "status": "error", "message": "Faltan campos requeridos" }
+    ```
+  </Accordion>
+
+  <Accordion title="400 — Email already registered">
+    An account with this email address already exists in the `usuarios` table.
+
+    ```json
+    { "status": "error", "message": "Este correo ya está registrado." }
+    ```
+  </Accordion>
+
+  <Accordion title="500 — Crypto or server error">
+    The ECDSA key generation script failed, or another server-side error occurred during registration.
+
+    ```json
+    { "status": "error", "message": "Error al procesar la seguridad del registro." }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Register a chef
+
+`POST /api/users/register-chef`
+
+Creates a new chef account in the `chef` table. The email must be unique across both the `usuarios` and `chef` tables.
+
+### Request body
+
+<ParamField body="nombre" type="string" required>
+  The chef's display name.
+</ParamField>
+
+<ParamField body="correo" type="string" required>
+  The chef's email address. Must be unique across both subscriber and chef accounts.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The chef's password. Used to derive the ECDSA private key encryption key.
+</ParamField>
+
+### Response
+
+<ResponseField name="status" type="string">
+  `'ok'` on success.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  `'Registro de Chef exitoso. Revisa tu correo para confirmar.'`
+</ResponseField>
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/users/register-chef \
+  -H "Content-Type: application/json" \
+  -d '{"nombre": "Chef Hernández", "correo": "chef@example.com", "password": "mySecurePass123"}'
+```
+
+### Error responses
+
+<AccordionGroup>
+  <Accordion title="400 — Email already registered">
+    An account with this email already exists in either the `usuarios` or `chef` table.
+
+    ```json
+    { "status": "error", "message": "Este correo ya está registrado." }
+    ```
+  </Accordion>
+
+  <Accordion title="500 — Server error">
+    The ECDSA key generation script failed, or another server-side error occurred.
+
+    ```json
+    { "status": "error", "message": "<error details>" }
+    ```
+  </Accordion>
+</AccordionGroup>

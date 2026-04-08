@@ -1,0 +1,86 @@
+---
+title: "Installation"
+description: "Clone the repository and install all dependencies"
+---
+
+Follow these steps to get RDCS running on your local machine.
+
+<Steps>
+
+<Step title="Clone the repository">
+
+```bash
+git clone https://github.com/Venuz25/secure-recipes-vault.git
+cd secure-recipes-vault
+```
+
+</Step>
+
+<Step title="Install all Node.js dependencies">
+
+From the repository root, run:
+
+```bash
+npm run install-all
+```
+
+This single command runs `npm install` in three locations: the repository root (which installs `concurrently` and shared utilities), the `frontend/` directory, and the `backend/` directory. You do not need to `cd` into each folder manually.
+
+</Step>
+
+<Step title="Install Python dependencies">
+
+```bash
+pip install -r requirements.txt
+```
+
+This installs the `cryptography` library used by the Python crypto engine (`crypto_vault/keys.py` and `crypto_vault/cipher.py`). The library provides the ECDSA, AES-GCM, and PBKDF2 primitives that secure user keys and recipe content.
+
+<Note>
+  If your system has both Python 2 and Python 3 installed, use `pip3` instead of `pip` to ensure you install into the correct environment.
+</Note>
+
+</Step>
+
+<Step title="Configure environment variables">
+
+Copy the example environment file and fill in your values before starting the servers:
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+See the [Configuration](/getting-started/configuration) page for a full explanation of each variable and how to set up your Mailtrap credentials.
+
+</Step>
+
+<Step title="Start the development servers">
+
+```bash
+npm run dev
+```
+
+This uses `concurrently` to launch both services at the same time:
+
+- **Frontend** — Vite dev server at `http://localhost:5173`
+- **Backend** — Express API server at `http://localhost:3000`
+
+Both servers support hot reload, so changes you make to source files are reflected immediately without restarting.
+
+<Tip>
+  If you need to run the frontend and backend in separate terminal windows, use the individual commands:
+
+  ```bash
+  # Terminal 1 — backend
+  npm run dev --prefix backend
+
+  # Terminal 2 — frontend
+  npm run dev --prefix frontend
+  ```
+
+  This is useful when you want separate log streams or need to restart only one service.
+</Tip>
+
+</Step>
+
+</Steps>

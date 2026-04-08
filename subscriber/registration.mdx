@@ -1,0 +1,51 @@
+---
+title: "Subscriber Registration"
+description: "Create a subscriber account to access encrypted chef recipes"
+---
+
+A subscriber account gives you access to the RDCS platform as a reader and collector of culinary content. Once registered, you can:
+
+- Browse the full recipe vault across all chefs
+- Subscribe to individual chefs to unlock their encrypted recipes
+- Save recipes to your personal cookbook (favorites)
+- Access encrypted ingredients, preparation steps, and images
+
+## Create your account
+
+<Steps>
+  <Step title="Open the registration page">
+    Navigate to the registration page and select **Register as Subscriber**.
+  </Step>
+  <Step title="Enter your details">
+    Fill in your full name, email address, and a strong password.
+  </Step>
+  <Step title="Submit the form">
+    Submit the form. The platform automatically generates your cryptographic identity — an ECDSA P-256 key pair — in the background. You do not need to do anything to trigger this.
+  </Step>
+  <Step title="Confirm your email">
+    Check your inbox for a confirmation email and click the link to activate your account.
+  </Step>
+  <Step title="Log in">
+    Log in with your email and password. You land directly on your subscriber dashboard.
+  </Step>
+</Steps>
+
+<Warning>
+  Your private key is encrypted with your password. If you forget your password, your cryptographic identity cannot be recovered. There is no password reset that preserves your key.
+</Warning>
+
+## Your subscriber dashboard
+
+After logging in, your dashboard is divided into three main areas:
+
+<CardGroup cols={3}>
+  <Card title="Recipe vault" icon="vault">
+    The full catalog of recipes from all chefs on the platform. Search and filter freely, even before subscribing.
+  </Card>
+  <Card title="My subscriptions" icon="file-contract">
+    Your active chef contracts, including start and expiry dates.
+  </Card>
+  <Card title="My cookbook" icon="book-open">
+    Your personal collection of favorited recipes for quick access.
+  </Card>
+</CardGroup>

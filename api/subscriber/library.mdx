@@ -1,0 +1,180 @@
+---
+title: "My Library"
+description: "Retrieve your active subscriptions and favorite recipes"
+---
+
+## Get your library
+
+`GET /api/subscriber/my-library/:id_usuario`
+
+Returns your active chef subscriptions and your saved favorite recipes. Use the `id` field from the login response as the `id_usuario` path parameter.
+
+### Path parameters
+
+<ParamField path="id_usuario" type="integer" required>
+  Your user ID. This is the `data.id` value returned when you log in.
+</ParamField>
+
+### Response
+
+<ResponseField name="status" type="string">
+  `'ok'` on success.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties" defaultOpen>
+    <ResponseField name="subscriptions" type="object[]">
+      Your active chef subscriptions. Only contracts with `estado = 'activo'` are returned — expired or cancelled contracts are excluded.
+
+      <Expandable title="subscription object properties">
+        <ResponseField name="id_contrato" type="integer">
+          Unique contract identifier.
+        </ResponseField>
+        <ResponseField name="id_usuario" type="integer">
+          Your user ID.
+        </ResponseField>
+        <ResponseField name="id_chef" type="integer">
+          ID of the subscribed chef.
+        </ResponseField>
+        <ResponseField name="periodo_meses" type="integer">
+          Subscription duration in months (3, 6, or 12).
+        </ResponseField>
+        <ResponseField name="costo" type="number">
+          Amount paid for the subscription.
+        </ResponseField>
+        <ResponseField name="fecha_inicio" type="string">
+          Subscription start date (YYYY-MM-DD).
+        </ResponseField>
+        <ResponseField name="fecha_fin" type="string">
+          Subscription expiry date (YYYY-MM-DD). After this date the contract becomes inactive and you lose access to the chef's recipes.
+        </ResponseField>
+        <ResponseField name="estado" type="string">
+          Contract status. Always `'activo'` in this response.
+        </ResponseField>
+        <ResponseField name="nombre_chef" type="string">
+          Display name of the chef.
+        </ResponseField>
+        <ResponseField name="foto_url" type="string">
+          Profile photo URL of the chef.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+
+    <ResponseField name="favorites" type="object[]">
+      Recipes you have saved to your cookbook.
+
+      <Expandable title="favorite recipe object properties">
+        <ResponseField name="id_receta" type="integer">
+          Unique recipe identifier.
+        </ResponseField>
+        <ResponseField name="titulo" type="string">
+          Recipe title.
+        </ResponseField>
+        <ResponseField name="subtitulo" type="string">
+          Short subtitle or tagline for the recipe.
+        </ResponseField>
+        <ResponseField name="descripcion" type="string">
+          Full description of the recipe.
+        </ResponseField>
+        <ResponseField name="nombre_chef" type="string">
+          Display name of the chef who created the recipe.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+```bash
+curl "http://localhost:3000/api/subscriber/my-library/12"
+```
+
+### Success response
+
+```json
+{
+  "status": "ok",
+  "data": {
+    "subscriptions": [
+      {
+        "id_contrato": 5,
+        "id_usuario": 12,
+        "id_chef": 4,
+        "periodo_meses": 6,
+        "costo": 29.99,
+        "fecha_inicio": "2025-10-01",
+        "fecha_fin": "2026-04-01",
+        "estado": "activo",
+        "nombre_chef": "Chef Hernández",
+        "foto_url": "https://example.com/fotos/chef4.jpg"
+      }
+    ],
+    "favorites": [
+      {
+        "id_receta": 7,
+        "titulo": "Pasta al Pesto",
+        "subtitulo": "Clásico italiano en 20 minutos",
+        "descripcion": "Una pasta fresca con salsa de albahaca y piñones.",
+        "nombre_chef": "Chef Hernández"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Toggle a favorite
+
+`POST /api/subscriber/favorite/toggle`
+
+Adds a recipe to your favorites if it is not already saved, or removes it if it is. You do not need to check the current state before calling this endpoint — the toggle is handled server-side.
+
+### Request body
+
+<ParamField body="id_usuario" type="integer" required>
+  Your user ID.
+</ParamField>
+
+<ParamField body="id_receta" type="integer" required>
+  The ID of the recipe to add or remove from your favorites.
+</ParamField>
+
+### Response
+
+<ResponseField name="status" type="string">
+  `'ok'` on success.
+</ResponseField>
+
+<ResponseField name="action" type="string">
+  The operation that was performed. `'added'` if the recipe was saved to your favorites, `'removed'` if it was deleted.
+</ResponseField>
+
+### Examples
+
+<Tabs>
+  <Tab title="Toggle request">
+    ```bash
+    curl -X POST http://localhost:3000/api/subscriber/favorite/toggle \
+      -H "Content-Type: application/json" \
+      -d '{"id_usuario": 12, "id_receta": 7}'
+    ```
+  </Tab>
+  <Tab title="Added response">
+    ```json
+    {
+      "status": "ok",
+      "action": "added"
+    }
+    ```
+  </Tab>
+  <Tab title="Removed response">
+    ```json
+    {
+      "status": "ok",
+      "action": "removed"
+    }
+    ```
+  </Tab>
+</Tabs>

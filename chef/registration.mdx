@@ -1,0 +1,57 @@
+---
+title: "Chef Registration"
+description: "Create a chef account and get your cryptographic identity set up"
+---
+
+## What makes a chef account different
+
+A chef account gives you publishing capabilities that a subscriber account does not. As a chef, you can:
+
+- Upload, edit, and delete encrypted recipes in your personal vault
+- View the list of subscribers who have an active contract to your content
+- Manage your public profile, including your description, photo, and star rating
+
+Subscriber accounts can only browse and read recipes they have subscribed to — they cannot publish content.
+
+## What happens during registration
+
+When you register as a chef, the platform does more than create an account. It generates a cryptographic identity for you:
+
+1. An **ECDSA P-256 key pair** is generated automatically via a secure Python process.
+2. Your **private key is encrypted** using a key derived from your password, then stored in the database alongside the encryption salt and nonce.
+3. Your **public key** is stored in plaintext and is used to verify your identity.
+4. A unique **32-byte confirmation token** is generated and sent to your email address.
+
+Your private key never leaves the server unencrypted. When you log in, the platform decrypts it in memory using your password to verify cryptographic integrity.
+
+<Warning>
+Your private key is derived from your password. If you forget your password, your cryptographic identity **cannot be recovered**. Choose a strong, memorable password before registering.
+</Warning>
+
+## Registration steps
+
+<Steps>
+  <Step title="Navigate to the registration page">
+    Open the app and click **Register as Chef** on the authentication page.
+  </Step>
+  <Step title="Enter your details">
+    Fill in your full name, email address, and a strong password.
+  </Step>
+  <Step title="Submit the form">
+    Click **Register**. The platform generates your ECDSA P-256 key pair automatically — no action is required from you.
+  </Step>
+  <Step title="Confirm your email">
+    Check your inbox for a confirmation email from Bóveda Culinaria. Click the **Activar Cuenta de Chef** link inside.
+
+    <Note>
+      The confirmation link contains a unique 32-byte token. You must click it before you can log in. The link is single-use and tied to your account.
+    </Note>
+  </Step>
+  <Step title="Log in">
+    Return to the app, enter your email and password, and click **Login**. The platform verifies your password, decrypts your private key in memory to confirm cryptographic integrity, and redirects you to your chef dashboard.
+  </Step>
+</Steps>
+
+## After registration
+
+Once you log in for the first time, you are taken directly to your [chef dashboard](/chef/dashboard). From there you can upload your first recipe, set up your profile, and start building your subscriber base.

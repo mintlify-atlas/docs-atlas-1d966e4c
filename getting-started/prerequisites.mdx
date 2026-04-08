@@ -1,0 +1,46 @@
+---
+title: "Prerequisites"
+description: "What you need before setting up Recetas Deliciosas Como Servicio"
+---
+
+Before you install RDCS, make sure you have the following tools installed on your machine.
+
+<CardGroup cols={2}>
+
+<Card title="Node.js v18+" icon="node-js" href="https://nodejs.org">
+  The JavaScript runtime that powers the Express backend and the Vite dev server. Version 18 or higher is required for native `fetch`, improved ES module support, and compatibility with the project's dependencies.
+</Card>
+
+<Card title="Python 3.9+" icon="python" href="https://www.python.org/downloads/">
+  The crypto engine uses Python scripts (`keys.py`, `cipher.py`) that perform ECDSA key generation, PBKDF2 key derivation, and AES-128-GCM encryption. Version 3.9 or higher is required.
+</Card>
+
+<Card title="pip" icon="box" href="https://pip.pypa.io/en/stable/installation/">
+  Python's package manager, used to install the `cryptography` library. pip is bundled with Python 3.4+ installers from python.org, so you likely already have it.
+</Card>
+
+<Card title="Mailtrap account" icon="envelope" href="https://mailtrap.io">
+  RDCS sends confirmation emails via SMTP during user registration. Mailtrap's free-tier sandbox intercepts outgoing mail so you can inspect it without delivering to real inboxes.
+</Card>
+
+<Card title="Git" icon="code-branch" href="https://git-scm.com/downloads">
+  Required to clone the repository. Any recent version of Git works.
+</Card>
+
+</CardGroup>
+
+## Verify your environment
+
+Run these commands to confirm your versions before proceeding:
+
+```bash
+node --version   # must be v18.0.0 or higher
+npm --version
+python3 --version  # must be 3.9.0 or higher
+pip3 --version
+git --version
+```
+
+<Note>
+  On some systems Python 3 is available as `python` rather than `python3`. Substitute accordingly throughout the setup steps.
+</Note>
